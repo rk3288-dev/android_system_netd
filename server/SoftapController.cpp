@@ -35,6 +35,7 @@
 
 #define LOG_TAG "SoftapController"
 #include <cutils/log.h>
+#include <cutils/properties.h>
 #include <netutils/ifc.h>
 #include <private/android_filesystem_config.h>
 #include "wifi.h"
@@ -44,6 +45,10 @@
 
 static const char HOSTAPD_CONF_FILE[]    = "/data/misc/wifi/hostapd.conf";
 static const char HOSTAPD_BIN_FILE[]    = "/system/bin/hostapd";
+static const char HOSTAPD_RTL_BIN_FILE[]    = "/system/bin/hostapd_rtl";
+static const char HOSTAPD_ESP_BIN_FILE[]    = "/system/bin/hostapd_esp";
+
+extern int check_wifi_chip_type_string(char *type);
 
 SoftapController::SoftapController()
     : mPid(0) {}
@@ -53,6 +58,19 @@ SoftapController::~SoftapController() {
 
 int SoftapController::startSoftap() {
     pid_t pid = 1;
+
+	char type[64], hostapd_name[64];
+	check_wifi_chip_type_string(type);
+	if (!strncmp(type, "AP", 2)) {
+		strcpy(hostapd_name, HOSTAPD_BIN_FILE);
+        } else if (!strncmp(type, "RK", 2)) {
+                strcpy(hostapd_name, HOSTAPD_BIN_FILE);
+	} else if (!strncmp(type, "RTL", 3)) {
+		strcpy(hostapd_name, HOSTAPD_RTL_BIN_FILE);
+	} else {
+		strcpy(hostapd_name, HOSTAPD_ESP_BIN_FILE);
+	}
+	ALOGD("%s: %s", __func__, hostapd_name);
 
     if (mPid) {
         ALOGE("SoftAP is already running");
@@ -70,7 +88,7 @@ int SoftapController::startSoftap() {
 
     if (!pid) {
         ensure_entropy_file_exists();
-        if (execl(HOSTAPD_BIN_FILE, HOSTAPD_BIN_FILE,
+        if (execl(hostapd_name, hostapd_name,
                   "-e", WIFI_ENTROPY_FILE,
                   HOSTAPD_CONF_FILE, (char *) NULL)) {
             ALOGE("execl failed (%s)", strerror(errno));

@@ -45,7 +45,7 @@
 #include "FirewallController.h"
 #include "RouteController.h"
 #include "UidRanges.h"
-
+#include "wifi.h"
 #include <string>
 #include <vector>
 
@@ -746,7 +746,7 @@ int CommandListener::SoftapCmd::runCommand(SocketClient *cli,
                                         int argc, char **argv) {
     int rc = ResponseCode::SoftapStatusResult;
     char *retbuf = NULL;
-
+    char type[64];
     if (sSoftapCtrl == NULL) {
       cli->sendMsg(ResponseCode::ServiceStartFailed, "SoftAP is not available", false);
       return -1;
@@ -762,6 +762,10 @@ int CommandListener::SoftapCmd::runCommand(SocketClient *cli,
     } else if (!strcmp(argv[1], "stopap")) {
         rc = sSoftapCtrl->stopSoftap();
     } else if (!strcmp(argv[1], "fwreload")) {
+       check_wifi_chip_type_string(type);
+       if(!strncmp(type, "ESP", 3))
+        rc = 0;
+       else
         rc = sSoftapCtrl->fwReloadSoftap(argc, argv);
     } else if (!strcmp(argv[1], "status")) {
         asprintf(&retbuf, "Softap service %s running",
